@@ -20,6 +20,7 @@ void lcdInit();
 void lcdDefaults();
 void lcdClear();
 void lcdDraw();
+void lcdClearBuffer();
 
 void lcdPutString(uint8_t c, uint8_t r, char* str);
 

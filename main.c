@@ -4,6 +4,9 @@ const float POSITIONS[] = {POS_LIN1, POS_LIN2, POS_LIN3, POS_LIN4, POS_LIN5};
 const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5};
 volatile uint16_t readings[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
 uint8_t curMux = 0;
+uint16_t minLine = 1023;
+uint16_t maxLine = 0;
+
 
 
 int main() {
@@ -16,7 +19,7 @@ int main() {
 	setupADC(); //start reading line sensor values
 	while(1) {
 		char* str = "XXXX";
-		lcdClear();
+		lcdClearBuffer();
 		for (int i = 0; i < 5; i++) {
 			uint16_t reading = readings[i];
 			itoa(reading, str, 10); //base 10 decimal
@@ -28,7 +31,10 @@ int main() {
 		uint16_t pos = round(col * 1023);
 		itoa(pos, str, 10);
 		lcdPutString(10, 1, str);
-		
+		if (col < 0.4)	lcdPutString(14, 1, "<-");
+		else if (col > 0.6)	lcdPutString(14, 1, "->");
+		else	lcdPutString(14, 1, "||");
+
 		lcdDraw();
 		_delay_ms(200);
 	}
@@ -49,7 +55,11 @@ void setMux(int mux) {
 }
 
 ISR(ADC_vect) {
-	readings[curMux] = ADC;
+	uint16_t reading = ADC;
+	readings[curMux] = reading;
+	if (reading < minLine) minLine = reading;
+	if (reading > maxLine) maxLine = reading;
+	
 	curMux = (curMux + 1) % ADC_NUMBER;
 	setMux(curMux);
 	ADCSRA |= _BV(ADSC); //start new conversion
@@ -58,9 +68,15 @@ ISR(ADC_vect) {
 float getCoL() {
 	float massDist = 0;
 	float mass = 0;
+	float spreadMin = 1;
+	float spreadMax = 0;
+	uint16_t range = maxLine - minLine;
+	
 	for (uint8_t i = 0; i < ADC_NUMBER; i++) {
-		uint16_t reading = readings[i] < 1023 ? (1023 - readings[i]) : 1;
-		float fltReading =  reading / 1023.0;
+		float fltReading = (readings[i] - minLine) / ((float)range);
+		fltReading = fltReading == 1 ? 0.01 : 1 - fltReading;
+		//uint16_t reading = readings[i] < 1023 ? (1023 - readings[i]) : 1;
+		//float fltReading =  reading / 1023.0;
 		mass += fltReading;
 		massDist += fltReading * POSITIONS[i];
 	}

@@ -65,6 +65,10 @@ void lcdDefaults() {
 
 void lcdClear() {
 	sendCommand(0b00000001);
+	lcdClearBuffer();
+}
+
+void lcdClearBuffer() {
 	memset(top, ' ', 16);
 	memset(bot, ' ', 16);
 }
