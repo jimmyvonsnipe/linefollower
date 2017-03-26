@@ -23,7 +23,8 @@ volatile uint16_t readings[];
 
 void setupADC();
 void setMux(int mux);
-float getCoL();
+// float getCoL();
+uint16_t getCoL();
 void setupPins();
 int main();
 
