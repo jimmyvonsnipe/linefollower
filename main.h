@@ -16,7 +16,7 @@
 #include "pins.h"
 #include "lcd.h"
 
-const float POSITIONS[];
+//const float POSITIONS[];
 const uint8_t MUXES[];
 uint8_t curMux;
 volatile uint16_t readings[]; 

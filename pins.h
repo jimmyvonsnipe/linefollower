@@ -1,22 +1,32 @@
 #ifndef PINS_H
 #define PINS_H
 
-//motor driver outputs
-#define B_MOT1 5
-#define PORT_MOT1 PORTB
-#define B_MOT2 6
-#define PORT_MOT2 PORTB
-#define B_MOT4 7
-#define PORT_MOT4 PORTB 
-#define B_MOT3 0
-#define PORT_MOT3 PORTD
+#define B_LED0 6
+#define PORT_LED0 PORTE
+#define B_LED1 0
+#define PORT_LED1 PORTB
+#define B_LED2 1
+#define PORT_LED2 PORTB
+#define B_LED3 2
+#define PORT_LED3 PORTB
 
-#define MUX_LIN1 0b000000 //adc0
-#define MUX_LIN2 0b000001 //adc1
-#define MUX_LIN3 0b000100 //adc4
-#define MUX_LIN4 0b000101 //adc5
-#define MUX_LIN5 0b000110 //adc6
-// #define MUX_LIN6 0b000111 //adc7
+
+//motor driver outputs
+#define B_MA1 5
+#define PORT_MA1 PORTB
+#define B_MA2 6
+#define PORT_MA2 PORTB
+#define B_MB2 7
+#define PORT_MB2 PORTB 
+#define B_MB1 0
+#define PORT_MB1 PORTD
+
+#define MUX_LIN1 0b000100 //adc4  PF4
+#define MUX_LIN2 0b000101 //adc5  PF5
+#define MUX_LIN3 0b000110 //adc6  PF6
+#define MUX_LIN4 0b000111 //adc7  PF7
+#define MUX_LIN5 0b100011 //adc11 PB4
+// #define MUX_LIN6 
 // #define MUX_LIN7 0b100000 //adc8
 // #define MUX_LIN8 0b100001 //adc9
 
