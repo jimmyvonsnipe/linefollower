@@ -9,9 +9,11 @@ volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023}; //10 bit output from 
 const uint16_t centerValue = (ADC_NUMBER-1) * 500;
 uint8_t curMux = 0;
 uint16_t lastPos = (ADC_NUMBER-1)*500;
+bool lostLine = false;
 
 
 int main() {
+	setupPins();
 	setupADC(); //start reading line sensor values
 	
 	while (1) {
@@ -24,13 +26,47 @@ int main() {
 		PORT_MB2 &= ~_BV(B_MB2);
 		PORT_MA1 &= ~_BV(B_MA1);
 		PORT_MA2 &= ~_BV(B_MA2);
-		_delay_ms(1000);
-		PORT_MB2 |= _BV(B_MB2); // M2 B2
-		//PORT_MB1 |= _BV(B_MB1); // heats up
-		PORT_MA2 |= _BV(B_MA2); //M1 A2
-		//PORT_MA1 |= _BV(B_MA1); //heats up
-		//PORT |= _BV(0);
-		_delay_ms(250);
+		if (PINC & _BV(6)) {
+			PORT_MB1 |= _BV(B_MB1); // heats up
+			PORT_MA1 |= _BV(B_MA1); //heats up
+		}
+		if (PINC & _BV(7)) {
+			PORT_MB2 |= _BV(B_MB2); // M2 B2
+			PORT_MA2 |= _BV(B_MA2); //M1 A2
+		}
+		
+		uint16_t pos = getCoL();
+		if (pos < 1000) {
+			if (lostLine) PORTD |= _BV(5);
+			PORT_LED0 |= _BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 1500) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 |= _BV(B_LED0);
+			PORT_LED1 |= _BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 2500) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 |= _BV(B_LED1);
+			PORT_LED2 |= _BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 3000) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 |= _BV(B_LED2);
+			PORT_LED3 |= _BV(B_LED3);
+		} else {
+			if (lostLine) PORTD |= _BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 |= _BV(B_LED3);
+		}
 	}
 	
 	
@@ -129,7 +165,11 @@ uint16_t getCoL() {
 		massDist += adjReading * (i * 1000);
 	}
 	
-	if (spreadMax - spreadMin < 250) return lastDir;
+	if (spreadMax - spreadMin < 250) {
+		lostLine = true;
+		return lastDir;
+	}
+	lostLine = false;
 	lastPos = (uint16_t)(massDist / mass);
 	return lastPos;
 }
@@ -141,4 +181,7 @@ void setupPins() {
 	//outputs for board LEDs
 	DDRE |= _BV(B_LED0);
 	DDRB |= _BV(B_LED1) | _BV(B_LED2) | _BV(B_LED3);
+	//output for onboard LED
+	DDRD |= _BV(5);
+	
 }
