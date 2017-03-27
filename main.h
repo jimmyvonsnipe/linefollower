@@ -21,6 +21,9 @@ const uint8_t MUXES[];
 uint8_t curMux;
 volatile uint16_t readings[]; 
 
+void setMotorOut(uint8_t motor, uint8_t val);
+void setupPWM();
+
 void setupADC();
 void setMux(int mux);
 // float getCoL();

@@ -15,58 +15,65 @@ bool lostLine = false;
 int main() {
 	setupPins();
 	setupADC(); //start reading line sensor values
-	
+	setupPWM();
+	uint8_t val = 0;
 	while (1) {
+		
 		//PORTB |= _BV(5);D
 		//PORT_MA1 |= _BV(B_MA1);
 		//PORT_MB1 |= _BV(B_MB1);
 		//PORT_MB1 |= _BV(B_MB1);
 		//_delay_ms(1000);
-		PORT_MB1 &= ~_BV(B_MB1);
-		PORT_MB2 &= ~_BV(B_MB2);
-		PORT_MA1 &= ~_BV(B_MA1);
-		PORT_MA2 &= ~_BV(B_MA2);
+		// if (PINC & _BV(6)) {
+			// PORT_MB1 |= _BV(B_MB1); // heats up
+			// PORT_MA1 |= _BV(B_MA1); //heats up
+		// }
+		// if (PINC & _BV(7)) {
+			// PORT_MB2 |= _BV(B_MB2); // M2 B2
+			// PORT_MA2 |= _BV(B_MA2); //M1 A2
+		// }
 		if (PINC & _BV(6)) {
-			PORT_MB1 |= _BV(B_MB1); // heats up
-			PORT_MA1 |= _BV(B_MA1); //heats up
-		}
+			val = val >= 255 ? 255 : val + 1;
+		} 
 		if (PINC & _BV(7)) {
-			PORT_MB2 |= _BV(B_MB2); // M2 B2
-			PORT_MA2 |= _BV(B_MA2); //M1 A2
+			val = val <= 0 ? 0 : val - 1;
 		}
+		setMotorOut(MB2, val);
+		setMotorOut(MA2, val);
+		_delay_ms(10);
 		
-		uint16_t pos = getCoL();
-		if (pos < 1000) {
-			if (lostLine) PORTD |= _BV(5);
-			PORT_LED0 |= _BV(B_LED0);
-			PORT_LED1 &= ~_BV(B_LED1);
-			PORT_LED2 &= ~_BV(B_LED2);
-			PORT_LED3 &= ~_BV(B_LED3);
-		} else if (pos < 1500) {
-			PORTD &= ~_BV(5);
-			PORT_LED0 |= _BV(B_LED0);
-			PORT_LED1 |= _BV(B_LED1);
-			PORT_LED2 &= ~_BV(B_LED2);
-			PORT_LED3 &= ~_BV(B_LED3);
-		} else if (pos < 2500) {
-			PORTD &= ~_BV(5);
-			PORT_LED0 &= ~_BV(B_LED0);
-			PORT_LED1 |= _BV(B_LED1);
-			PORT_LED2 |= _BV(B_LED2);
-			PORT_LED3 &= ~_BV(B_LED3);
-		} else if (pos < 3000) {
-			PORTD &= ~_BV(5);
-			PORT_LED0 &= ~_BV(B_LED0);
-			PORT_LED1 &= ~_BV(B_LED1);
-			PORT_LED2 |= _BV(B_LED2);
-			PORT_LED3 |= _BV(B_LED3);
-		} else {
-			if (lostLine) PORTD |= _BV(5);
-			PORT_LED0 &= ~_BV(B_LED0);
-			PORT_LED1 &= ~_BV(B_LED1);
-			PORT_LED2 &= ~_BV(B_LED2);
-			PORT_LED3 |= _BV(B_LED3);
-		}
+		// uint16_t pos = getCoL();
+		// if (pos < 1000) {
+			// if (lostLine) PORTD |= _BV(5);
+			// PORT_LED0 |= _BV(B_LED0);
+			// PORT_LED1 &= ~_BV(B_LED1);
+			// PORT_LED2 &= ~_BV(B_LED2);
+			// PORT_LED3 &= ~_BV(B_LED3);
+		// } else if (pos < 1500) {
+			// PORTD &= ~_BV(5);
+			// PORT_LED0 |= _BV(B_LED0);
+			// PORT_LED1 |= _BV(B_LED1);
+			// PORT_LED2 &= ~_BV(B_LED2);
+			// PORT_LED3 &= ~_BV(B_LED3);
+		// } else if (pos < 2500) {
+			// PORTD &= ~_BV(5);
+			// PORT_LED0 &= ~_BV(B_LED0);
+			// PORT_LED1 |= _BV(B_LED1);
+			// PORT_LED2 |= _BV(B_LED2);
+			// PORT_LED3 &= ~_BV(B_LED3);
+		// } else if (pos < 3000) {
+			// PORTD &= ~_BV(5);
+			// PORT_LED0 &= ~_BV(B_LED0);
+			// PORT_LED1 &= ~_BV(B_LED1);
+			// PORT_LED2 |= _BV(B_LED2);
+			// PORT_LED3 |= _BV(B_LED3);
+		// } else {
+			// if (lostLine) PORTD |= _BV(5);
+			// PORT_LED0 &= ~_BV(B_LED0);
+			// PORT_LED1 &= ~_BV(B_LED1);
+			// PORT_LED2 &= ~_BV(B_LED2);
+			// PORT_LED3 |= _BV(B_LED3);
+		// }
 	}
 	
 	
@@ -95,6 +102,38 @@ int main() {
 		// _delay_ms(200);
 	// }
 	return 1;
+}
+
+void setMotorOut(uint8_t motor, uint8_t val) {
+	switch (motor) {
+		case MA1:
+		
+		break;
+		
+		case MA2:
+		OCR1BL = val;
+		break;
+		
+		case MB1:
+		break;
+		
+		case MB2:
+		OCR0A = val;
+		break;
+	
+		
+	}
+}
+
+void setupPWM() {
+	OCR0A = 0;
+	TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+	TCCR0B = _BV(CS01) | _BV(CS00);
+	
+	OCR1B = 0;
+	TCCR1A = _BV(COM1B1) | _BV(WGM10);
+	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); 
+	//clk/64 and only 8 bit fast PWM	
 }
 
 void setupADC() {
