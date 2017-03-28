@@ -19,19 +19,22 @@ int main() {
 	uint8_t val = 0;
 	while (1) {
 		
-		//PORTB |= _BV(5);D
-		//PORT_MA1 |= _BV(B_MA1);
-		//PORT_MB1 |= _BV(B_MB1);
-		//PORT_MB1 |= _BV(B_MB1);
-		//_delay_ms(1000);
 		// if (PINC & _BV(6)) {
 			// PORT_MB1 |= _BV(B_MB1); // heats up
 			// PORT_MA1 |= _BV(B_MA1); //heats up
+		// } else {
+			// PORT_MB1 &= ~_BV(B_MB1);
+			// PORT_MA1 &= ~_BV(B_MA1);
 		// }
+
 		// if (PINC & _BV(7)) {
 			// PORT_MB2 |= _BV(B_MB2); // M2 B2
 			// PORT_MA2 |= _BV(B_MA2); //M1 A2
+		// } else {
+			// PORT_MA2 &= ~_BV(B_MA2);
+			// PORT_MB2 &= ~_BV(B_MB2);
 		// }
+	
 		if (PINC & _BV(6)) {
 			val = val >= 255 ? 255 : val + 1;
 		} 
@@ -42,38 +45,38 @@ int main() {
 		setMotorOut(MA2, val);
 		_delay_ms(10);
 		
-		// uint16_t pos = getCoL();
-		// if (pos < 1000) {
-			// if (lostLine) PORTD |= _BV(5);
-			// PORT_LED0 |= _BV(B_LED0);
-			// PORT_LED1 &= ~_BV(B_LED1);
-			// PORT_LED2 &= ~_BV(B_LED2);
-			// PORT_LED3 &= ~_BV(B_LED3);
-		// } else if (pos < 1500) {
-			// PORTD &= ~_BV(5);
-			// PORT_LED0 |= _BV(B_LED0);
-			// PORT_LED1 |= _BV(B_LED1);
-			// PORT_LED2 &= ~_BV(B_LED2);
-			// PORT_LED3 &= ~_BV(B_LED3);
-		// } else if (pos < 2500) {
-			// PORTD &= ~_BV(5);
-			// PORT_LED0 &= ~_BV(B_LED0);
-			// PORT_LED1 |= _BV(B_LED1);
-			// PORT_LED2 |= _BV(B_LED2);
-			// PORT_LED3 &= ~_BV(B_LED3);
-		// } else if (pos < 3000) {
-			// PORTD &= ~_BV(5);
-			// PORT_LED0 &= ~_BV(B_LED0);
-			// PORT_LED1 &= ~_BV(B_LED1);
-			// PORT_LED2 |= _BV(B_LED2);
-			// PORT_LED3 |= _BV(B_LED3);
-		// } else {
-			// if (lostLine) PORTD |= _BV(5);
-			// PORT_LED0 &= ~_BV(B_LED0);
-			// PORT_LED1 &= ~_BV(B_LED1);
-			// PORT_LED2 &= ~_BV(B_LED2);
-			// PORT_LED3 |= _BV(B_LED3);
-		// }
+		uint16_t pos = getCoL();
+		if (pos < 1000) {
+			if (lostLine) PORTD |= _BV(5);
+			PORT_LED0 |= _BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 1500) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 |= _BV(B_LED0);
+			PORT_LED1 |= _BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 2500) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 |= _BV(B_LED1);
+			PORT_LED2 |= _BV(B_LED2);
+			PORT_LED3 &= ~_BV(B_LED3);
+		} else if (pos < 3000) {
+			PORTD &= ~_BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 |= _BV(B_LED2);
+			PORT_LED3 |= _BV(B_LED3);
+		} else {
+			if (lostLine) PORTD |= _BV(5);
+			PORT_LED0 &= ~_BV(B_LED0);
+			PORT_LED1 &= ~_BV(B_LED1);
+			PORT_LED2 &= ~_BV(B_LED2);
+			PORT_LED3 |= _BV(B_LED3);
+		}
 	}
 	
 	
@@ -85,7 +88,7 @@ int main() {
 		// char* str = "XXXX";
 		// lcdClearBuffer();
 		// for (int i = 0; i < 5; i++) {
-			// uint16_t reading = adjusted[i];
+			// uint16_t reading = readings[i];
 			// itoa(reading, str, 10); //base 10 decimal
 			// uint8_t row = i > 2 ? 1 : 0;
 			// uint8_t col = i > 2 ? (i - 3) * 5 : i * 5;
@@ -95,8 +98,8 @@ int main() {
 		// itoa(pos, str, 10);
 		// lcdPutString(10, 1, str);
 		// if (pos < 1500)	lcdPutString(14, 1, "<-");
-		// else if (pos > 2500)	lcdPutString(14, 1, "->");
-		// else	lcdPutString(14, 1, "||");
+		// else if (pos > 2500) lcdPutString(14, 1, "->");
+		// else lcdPutString(14, 1, "||");
 
 		// lcdDraw();
 		// _delay_ms(200);
