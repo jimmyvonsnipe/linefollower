@@ -1,6 +1,8 @@
 #include "main.h"
 
+
 //const float POSITIONS[] = {POS_LIN1, POS_LIN2, POS_LIN3, POS_LIN4, POS_LIN5};
+volatile bool calibrating = false;
 const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5};
 volatile uint16_t readings[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
 volatile uint32_t adjusted[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
@@ -17,6 +19,14 @@ int main() {
 	setupADC(); //start reading line sensor values
 	setupPWM();
 	uint8_t val = 0;
+	calibrating = true;
+	// while (!(PINC & _BV(7))) {
+		// PORTD |= _BV(5);
+	// }
+	// PORTD &= ~_BV(5);
+	// calibrating = false;
+	
+	
 	while (1) {
 		
 		// if (PINC & _BV(6)) {
@@ -41,8 +51,6 @@ int main() {
 		if (PINC & _BV(7)) {
 			val = val <= 0 ? 0 : val - 1;
 		}
-		setMotorOut(MB2, val);
-		setMotorOut(MA2, val);
 		_delay_ms(10);
 		
 		uint16_t pos = getCoL();
@@ -77,6 +85,20 @@ int main() {
 			PORT_LED2 &= ~_BV(B_LED2);
 			PORT_LED3 |= _BV(B_LED3);
 		}
+		
+		float correction = (pos - 2000.0) / 2000.0;
+		bool goLeft = pos < 2000;
+		correction = goLeft ? -1 - correction : 1 - correction;
+		uint16_t slowMotorVal = abs(round(val * correction));
+		slowMotorVal = slowMotorVal > 255 ? 255 : slowMotorVal;
+		
+		
+		uint8_t leftMotorVal = goLeft ? val : slowMotorVal;
+		uint8_t rightMotorVal = !goLeft ? val : slowMotorVal;
+		
+		setMotorOut(MB2, leftMotorVal);
+		setMotorOut(MA2, rightMotorVal);
+		
 	}
 	
 	
@@ -110,21 +132,15 @@ int main() {
 void setMotorOut(uint8_t motor, uint8_t val) {
 	switch (motor) {
 		case MA1:
-		
 		break;
-		
 		case MA2:
 		OCR1BL = val;
 		break;
-		
 		case MB1:
 		break;
-		
 		case MB2:
 		OCR0A = val;
 		break;
-	
-		
 	}
 }
 
@@ -155,8 +171,10 @@ void setMux(int mux) {
 ISR(ADC_vect) {
 	uint16_t reading = ADC;
 	readings[curMux] = reading;
-	if (reading < mins[curMux]) mins[curMux] = reading;
-	if (reading > maxes[curMux]) maxes[curMux] = reading;
+	if(calibrating) {
+		if (reading < mins[curMux]) mins[curMux] = reading;
+		if (reading > maxes[curMux]) maxes[curMux] = reading;
+	}
 	
 	curMux = (curMux + 1) % ADC_NUMBER;
 	setMux(curMux);
@@ -207,11 +225,14 @@ uint16_t getCoL() {
 		massDist += adjReading * (i * 1000);
 	}
 	
-	if (spreadMax - spreadMin < 250) {
+	uint16_t valueSpread = spreadMax - spreadMin;
+	if (valueSpread < 300) {
 		lostLine = true;
-		return lastDir;
+	}  else if (valueSpread > 350) {
+		lostLine = false;
 	}
-	lostLine = false;
+	
+	if (lostLine) return lastPos;
 	lastPos = (uint16_t)(massDist / mass);
 	return lastPos;
 }
