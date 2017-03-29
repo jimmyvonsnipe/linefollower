@@ -19,7 +19,10 @@ int main() {
 	setupADC(); //start reading line sensor values
 	setupPWM();
 	uint8_t val = 0;
-	calibrating = true;
+	calibrating = true; 
+	DDRD &= ~_BV(4); //jumper for straight ahead, set as input
+	PORTD |= _BV(4); //pullup resistor
+	
 	// while (!(PINC & _BV(7))) {
 		// PORTD |= _BV(5);
 	// }
@@ -86,18 +89,23 @@ int main() {
 			PORT_LED3 |= _BV(B_LED3);
 		}
 		
-		float correction = (pos - 2000.0) / 2000.0;
+		float correction = fabs((pos - 2000.0) / 2000.0);
 		bool goLeft = pos < 2000;
-		correction = goLeft ? -1 - correction : 1 - correction;
-		uint16_t slowMotorVal = abs(round(val * correction));
-		slowMotorVal = slowMotorVal > 255 ? 255 : slowMotorVal;
+		correction = 1 - correction;
+		uint16_t slowMotorVal = round(val * correction);
+		slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
 		
 		
 		uint8_t leftMotorVal = goLeft ? val : slowMotorVal;
 		uint8_t rightMotorVal = !goLeft ? val : slowMotorVal;
 		
-		setMotorOut(MB2, leftMotorVal);
-		setMotorOut(MA2, rightMotorVal);
+		if (PIND & _BV(4)) { //if jumper not connected
+			setMotorOut(MB2, leftMotorVal);
+			setMotorOut(MA2, rightMotorVal);
+		} else {			
+			setMotorOut(MB2, val);
+			setMotorOut(MA2, val);
+		}
 		
 	}
 	
@@ -232,7 +240,7 @@ uint16_t getCoL() {
 		lostLine = false;
 	}
 	
-	if (lostLine) return lastPos;
+	if (lostLine) return lastDir;
 	lastPos = (uint16_t)(massDist / mass);
 	return lastPos;
 }
