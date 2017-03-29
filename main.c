@@ -17,12 +17,13 @@ bool lostLine = false;
 int main() {
 	setupPins();
 	setupADC(); //start reading line sensor values
-	setupPWM();
+	setupPWM(); //setup PWM timers
 	uint8_t val = 0;
 	calibrating = true; 
 	DDRD &= ~_BV(4); //jumper for straight ahead, set as input
 	PORTD |= _BV(4); //pullup resistor
 	
+	//see if initial calibration is better than continuous calibration?
 	// while (!(PINC & _BV(7))) {
 		// PORTD |= _BV(5);
 	// }
@@ -56,6 +57,8 @@ int main() {
 		}
 		_delay_ms(10);
 		
+		//show the estimated line position on Top LEDs
+		//if we lose the line, turn on the blue LED. 
 		uint16_t pos = getCoL();
 		if (pos < 1000) {
 			if (lostLine) PORTD |= _BV(5);
@@ -109,7 +112,7 @@ int main() {
 		
 	}
 	
-	
+	//LCD for debuggin. 
 	// lcdInit();
 	// lcdDefaults();
 	// lcdPutString(0,0,"Hello World");
@@ -153,37 +156,46 @@ void setMotorOut(uint8_t motor, uint8_t val) {
 }
 
 void setupPWM() {
-	OCR0A = 0;
+	OCR0A = 0; 
 	TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
 	TCCR0B = _BV(CS01) | _BV(CS00);
+	//enable timer 0 with fast PWM with a 1/64 prescaler
+	//results in a pwm frequency of about 976Hz
+	//play around see what the motors like
 	
 	OCR1B = 0;
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); 
 	//clk/64 and only 8 bit fast PWM	
+	//only 8 bits so we can use the same logic across both timers,
+	//1024 bit precision is overkill with shit motors
 }
 
 void setupADC() {
-	ADMUX = _BV(REFS0);
-	setMux(curMux);
+	ADMUX = _BV(REFS0); //Internal Vcc reference with a cap at AREF
+	setMux(curMux); //look at the first sensor
 	ADCSRA = _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
-	sei();
-	ADCSRA |= _BV(ADSC);
+	// enable ADC with interupts, cpu speed/128 is our ADC clock
+	sei(); //enable interrupts globally
+	ADCSRA |= _BV(ADSC); 
 }
 
-void setMux(int mux) {
+void setMux(int mux) { 
+	//check datasheet for ADC Mux values. This changes the sensor that is being read. 
 	ADMUX = (ADMUX & 0b11100000) | (MUXES[mux] & 0b00011111);
 	ADCSRB = (ADCSRB & ~(_BV(MUX5))) | (MUXES[mux] & _BV(MUX5));
 }
 
+
 ISR(ADC_vect) {
 	uint16_t reading = ADC;
-	readings[curMux] = reading;
-	if(calibrating) {
+	readings[curMux] = reading; //save our reading in the appropriate array bin
+	if(calibrating) { //do the calibration here so we can use it in the main code
 		if (reading < mins[curMux]) mins[curMux] = reading;
 		if (reading > maxes[curMux]) maxes[curMux] = reading;
 	}
 	
+	//focus on the next sensor, if at the last one, loop around
 	curMux = (curMux + 1) % ADC_NUMBER;
 	setMux(curMux);
 	ADCSRA |= _BV(ADSC); //start new conversion
@@ -212,35 +224,51 @@ uint16_t getCoL() {
 	uint32_t mass = 0;
 	uint16_t spreadMin = 1000;
 	uint16_t spreadMax = 0;
-		
-	const uint16_t lastDir = lastPos < centerValue ? 0 : (ADC_NUMBER-1)*1000;
+	
 	
 	//floats have been replaced with 1000 int precision
+	//for each sensor
 	for (uint8_t i = 0; i < ADC_NUMBER; i++) {
 		
+		//get the max and min expected values for each sensor (written in the interrupt)
+		//the difference is the usable range of the sensor. 
 		uint32_t range = maxes[i] - mins[i];
-		if (range == 0) return centerValue;
+		if (range == 0) return centerValue; //divide by 0 avoidance
 		
+		//where in between the minimum and maximum sensor values is the latest reading?
+		//express this as a proportion between 0 and 1000
+		//ideally 1000 is the line and 0 is the black surface, ofc this is wishful thinking
+		//i usually get like 200 and 800 which is pretty good
 		uint32_t adjReading = (((uint32_t)readings[i] - mins[i]) * 1000);
 		adjReading = adjReading / (range);
 		adjReading = adjReading == 0 ? 1 : adjReading;
 		
+		//calculating the minimum and maximum sensor values at this time for lost line situation
 		if (adjReading < spreadMin) spreadMin = adjReading;
 		if (adjReading > spreadMax) spreadMax = adjReading;
 
-		adjusted[i] = adjReading;
+		adjusted[i] = adjReading; //not necessary array but useful for debugging
+		
+		//think of brightnesses as mass and each sensor as having a displacement
+			//and you'll understand how i've abused a sorta-center-of-mass equation to find the line
 		mass += adjReading;
 		massDist += adjReading * (i * 1000);
 	}
 	
+	//if the line was last left of center, then steer hard left if we lose the line, and vice versa
+	uint16_t lastDir = lastPos < centerValue ? 0 : (ADC_NUMBER-1)*1000;
 	uint16_t valueSpread = spreadMax - spreadMin;
-	if (valueSpread < 300) {
+	// if there is very little variation in the data
+		//and the overall field is relatively dark (doesn't trigger on cross intersections)
+		//we've probably lost the line
+	if (valueSpread < 300 && mass < ((1000 * ADC_NUMBER) / 2)) { 
 		lostLine = true;
-	}  else if (valueSpread > 350) {
+	}  else if (valueSpread > 350) { //some hysteresis to stop retarded twitching, commit to a direction. 
 		lostLine = false;
 	}
 	
 	if (lostLine) return lastDir;
+	
 	lastPos = (uint16_t)(massDist / mass);
 	return lastPos;
 }
