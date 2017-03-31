@@ -92,9 +92,16 @@ int main() {
 			PORT_LED3 |= _BV(B_LED3);
 		}
 		
-		float correction = fabs((pos - 2000.0) / 2000.0);
-		bool goLeft = pos < 2000;
-		correction = 1 - correction;
+		float correction = (pos - 2000.0) / 2000.0;
+		
+		if (fabs(correction > 1)) {
+			correction = correction < 0 ? -1 : 1;
+		}	
+		
+		
+		// bool goLeft = pos < 2000;
+		bool goLeft = correction < 0;
+		correction = 1 - fabs(correction);
 		uint16_t slowMotorVal = round(val * correction);
 		slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
 		
