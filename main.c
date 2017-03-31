@@ -92,9 +92,13 @@ int main() {
 			PORT_LED3 |= _BV(B_LED3);
 		}
 		
-		float correction = (pos - 2000.0) / 2000.0;
+		const float Kp = 2;
 		
-		if (fabs(correction > 1)) {
+		float error = (pos - 2000.0) / 2000.0;
+		float pTerm = error * Kp;
+		
+		float correction = pTerm;
+		if (fabs(correction) > 1) {
 			correction = correction < 0 ? -1 : 1;
 		}	
 		
