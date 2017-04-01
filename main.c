@@ -13,6 +13,8 @@ uint8_t curMux = 0;
 uint16_t lastPos = (ADC_NUMBER-1)*500;
 bool lostLine = false;
 
+float iTerm = 0;
+float lastError = 0;
 
 int main() {
 	setupPins();
@@ -92,18 +94,28 @@ int main() {
 			PORT_LED3 |= _BV(B_LED3);
 		}
 		
-		const float Kp = 2;
+		// const float Kp = 2;
+		// const float Ki = 0;
+		// const float Kd = 0;
+		const float Kp = 1.5;
+		const float Ki = 0.05;
+		const float Kd = 0.25;
 		
 		float error = (pos - 2000.0) / 2000.0;
-		float pTerm = error * Kp;
 		
-		float correction = pTerm;
+		iTerm += error; 
+		if (fabs(iTerm) > 1) { //turn this limiting into a function
+			iTerm = iTerm < 0 ? -1 : 1;
+		}
+		
+		float dTerm = lastError - error;
+		lastError = error;
+		
+		float correction = (error * Kp) + (iTerm * Ki) + (dTerm * Kd);
 		if (fabs(correction) > 1) {
 			correction = correction < 0 ? -1 : 1;
 		}	
 		
-		
-		// bool goLeft = pos < 2000;
 		bool goLeft = correction < 0;
 		correction = 1 - fabs(correction);
 		uint16_t slowMotorVal = round(val * correction);
@@ -212,6 +224,7 @@ ISR(ADC_vect) {
 	ADCSRA |= _BV(ADSC); //start new conversion
 }
 
+//wanted to reduce cycle count so getting rid of floats where practical
 // float getCoL() {
 	// float massDist = 0;
 	// float mass = 0;
@@ -236,7 +249,6 @@ uint16_t getCoL() {
 	uint16_t spreadMin = 1000;
 	uint16_t spreadMax = 0;
 	
-	
 	//floats have been replaced with 1000 int precision
 	//for each sensor
 	for (uint8_t i = 0; i < ADC_NUMBER; i++) {
@@ -249,7 +261,7 @@ uint16_t getCoL() {
 		//where in between the minimum and maximum sensor values is the latest reading?
 		//express this as a proportion between 0 and 1000
 		//ideally 1000 is the line and 0 is the black surface, ofc this is wishful thinking
-		//i usually get like 200 and 800 which is pretty good
+		//the bot usually gets like 200 and 800 which is pretty good
 		uint32_t adjReading = (((uint32_t)readings[i] - mins[i]) * 1000);
 		adjReading = adjReading / (range);
 		adjReading = adjReading == 0 ? 1 : adjReading;
@@ -268,13 +280,17 @@ uint16_t getCoL() {
 	
 	//if the line was last left of center, then steer hard left if we lose the line, and vice versa
 	uint16_t lastDir = lastPos < centerValue ? 0 : (ADC_NUMBER-1)*1000;
-	uint16_t valueSpread = spreadMax - spreadMin;
 	// if there is very little variation in the data
 		//and the overall field is relatively dark (doesn't trigger on cross intersections)
 		//we've probably lost the line
-	if (valueSpread < 300 && mass < ((1000 * ADC_NUMBER) / 2)) { 
+	uint16_t valueSpread = spreadMax - spreadMin;
+	const uint16_t LOST_THRESH = 300;
+	const uint16_t FOUND_THRESH = 350;
+	const uint16_t DARKNESS_THRESH = ((1000 * ADC_NUMBER) / 2); // in terms of sum of all readings
+	
+	if (valueSpread < LOST_THRESH && mass < DARKNESS_THRESH) { 
 		lostLine = true;
-	}  else if (valueSpread > 350) { //some hysteresis to stop retarded twitching, commit to a direction. 
+	}  else if (valueSpread > FOUND_THRESH) { //some hysteresis to stop retarded twitching, commit to a direction. 
 		lostLine = false;
 	}
 	
