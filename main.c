@@ -104,6 +104,7 @@ int main() {
 		float error = (pos - 2000.0) / 2000.0;
 		
 		iTerm += error; 
+		//stop integral windup if the bot gets stuck etc
 		if (fabs(iTerm) > 1) { //turn this limiting into a function
 			iTerm = iTerm < 0 ? -1 : 1;
 		}
@@ -122,8 +123,8 @@ int main() {
 		slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
 		
 		
-		uint8_t leftMotorVal = goLeft ? val : slowMotorVal;
-		uint8_t rightMotorVal = !goLeft ? val : slowMotorVal;
+		uint8_t leftMotorVal = goLeft ? slowMotorVal : val;
+		uint8_t rightMotorVal = !goLeft ? slowMotorVal : val;
 		
 		if (PIND & _BV(4)) { //if jumper not connected
 			setMotorOut(MB2, leftMotorVal);
