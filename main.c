@@ -52,7 +52,8 @@ int main() {
 		// }
 	
 		if (PINC & _BV(6)) {
-			val = val >= 255 ? 255 : val + 1;
+			val = val >= 127 ? 127 : val + 1;
+			//fast wheel can go up to double speed at full lock steering, so max is 255/2 ~= 127
 		} 
 		if (PINC & _BV(7)) {
 			val = val <= 0 ? 0 : val - 1;
@@ -117,14 +118,25 @@ int main() {
 			correction = correction < 0 ? -1 : 1;
 		}	
 		
+		// bool goLeft = correction < 0;
+		// correction = 1 - fabs(correction);
+		// uint16_t slowMotorVal = round(val * correction);
+		// slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
+		
 		bool goLeft = correction < 0;
-		correction = 1 - fabs(correction);
-		uint16_t slowMotorVal = round(val * correction);
-		slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
+		float slowCorrection = 1 - fabs(correction);
+		float fastCorrection = 1 + fabs(correction);
+		uint16_t slowMotorVal = round(val * slowCorrection);
+		uint16_t fastMotorVal = round(val * fastCorrection);
+		
+		slowMotorVal = slowMotorVal > 255 ? 255 : slowMotorVal;
+		fastMotorVal = fastMotorVal > 255 ? 255 : fastMotorVal;
 		
 		
-		uint8_t leftMotorVal = goLeft ? slowMotorVal : val;
-		uint8_t rightMotorVal = !goLeft ? slowMotorVal : val;
+		uint8_t leftMotorVal = goLeft ? slowMotorVal : fastMotorVal;
+		uint8_t rightMotorVal = !goLeft ? slowMotorVal : fastMotorVal;
+		
+		
 		
 		if (PIND & _BV(4)) { //if jumper not connected
 			setMotorOut(MB2, leftMotorVal);
