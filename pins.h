@@ -26,11 +26,11 @@
 #define MB1 2
 #define MB2 3
 
-#define MUX_LIN1 0b000100 //adc4  PF4
-#define MUX_LIN2 0b000101 //adc5  PF5
+#define MUX_LIN5 0b000100 //adc4  PF4
+#define MUX_LIN4 0b000101 //adc5  PF5
 #define MUX_LIN3 0b000110 //adc6  PF6
-#define MUX_LIN4 0b000111 //adc7  PF7
-#define MUX_LIN5 0b100011 //adc11 PB4
+#define MUX_LIN2 0b000111 //adc7  PF7
+#define MUX_LIN1 0b100011 //adc11 PB4
 // #define MUX_LIN6 
 // #define MUX_LIN7 0b100000 //adc8
 // #define MUX_LIN8 0b100001 //adc9
