@@ -2,15 +2,17 @@
 // I was here
 
 //const float POSITIONS[] = {POS_LIN1, POS_LIN2, POS_LIN3, POS_LIN4, POS_LIN5};
-volatile bool calibrating = false;
 const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5};
+const uint16_t centerValue = (LINE_SENSORS-1) * 500;
+
 volatile uint16_t readings[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
 volatile uint32_t adjusted[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
 volatile uint16_t maxes[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
 volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023}; //10 bit output from the ADC
-const uint16_t centerValue = (ADC_NUMBER-1) * 500;
-uint8_t curMux = 0;
-uint16_t lastPos = (ADC_NUMBER-1)*500;
+volatile uint8_t curMux = 0;
+
+bool calibrating = false;
+uint16_t lastPos = centerValue;
 bool lostLine = false;
 
 float iTerm = 0;
@@ -264,7 +266,7 @@ uint16_t getCoL() {
 	
 	//floats have been replaced with 1000 int precision
 	//for each sensor
-	for (uint8_t i = 0; i < ADC_NUMBER; i++) {
+	for (uint8_t i = 0; i < LINE_SENSORS; i++) {
 		
 		//get the max and min expected values for each sensor (written in the interrupt)
 		//the difference is the usable range of the sensor. 
@@ -292,14 +294,14 @@ uint16_t getCoL() {
 	}
 	
 	//if the line was last left of center, then steer hard left if we lose the line, and vice versa
-	uint16_t lastDir = lastPos < centerValue ? 0 : (ADC_NUMBER-1)*1000;
+	uint16_t lastDir = lastPos < centerValue ? 0 : (LINE_SENSORS-1)*1000;
 	// if there is very little variation in the data
 		//and the overall field is relatively dark (doesn't trigger on cross intersections)
 		//we've probably lost the line
 	uint16_t valueSpread = spreadMax - spreadMin;
 	const uint16_t LOST_THRESH = 300;
 	const uint16_t FOUND_THRESH = 350;
-	const uint16_t DARKNESS_THRESH = ((1000 * ADC_NUMBER) / 2); // in terms of sum of all readings
+	const uint16_t DARKNESS_THRESH = ((1000 * LINE_SENSORS) / 2); // in terms of sum of all readings
 	
 	if (valueSpread < LOST_THRESH && mass < DARKNESS_THRESH) { 
 		lostLine = true;
