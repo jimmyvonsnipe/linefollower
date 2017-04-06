@@ -1,9 +1,6 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define ADC_NUMBER 5
-
-
 #include <avr/io.h>
 #include <avr/interrupt.h>   // interrupt vectors
 #include <util/delay.h>      // delay functions

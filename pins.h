@@ -26,6 +26,10 @@
 #define MB1 2
 #define MB2 3
 
+
+#define ADC_NUMBER 5
+#define LINE_SENSORS 5
+
 #define MUX_LIN5 0b000100 //adc4  PF4
 #define MUX_LIN4 0b000101 //adc5  PF5
 #define MUX_LIN3 0b000110 //adc6  PF6
