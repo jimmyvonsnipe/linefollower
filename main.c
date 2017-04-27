@@ -2,13 +2,13 @@
 // I was here
 
 //const float POSITIONS[] = {POS_LIN1, POS_LIN2, POS_LIN3, POS_LIN4, POS_LIN5};
-const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5};
+const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5, MUX_LC, MUX_RC};
 const uint16_t centerValue = (LINE_SENSORS-1) * 500;
 
-volatile uint16_t readings[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint32_t adjusted[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint16_t maxes[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023}; //10 bit output from the ADC
+volatile uint16_t readings[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint32_t adjusted[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint16_t maxes[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023, 1023, 1023}; //10 bit output from the ADC
 volatile uint8_t curMux = 0;
 
 bool calibrating = false;
@@ -37,21 +37,6 @@ int main() {
 	
 	while (1) {
 		
-		// if (PINC & _BV(6)) {
-			// PORT_MB1 |= _BV(B_MB1); // heats up
-			// PORT_MA1 |= _BV(B_MA1); //heats up
-		// } else {
-			// PORT_MB1 &= ~_BV(B_MB1);
-			// PORT_MA1 &= ~_BV(B_MA1);
-		// }
-
-		// if (PINC & _BV(7)) {
-			// PORT_MB2 |= _BV(B_MB2); // M2 B2
-			// PORT_MA2 |= _BV(B_MA2); //M1 A2
-		// } else {
-			// PORT_MA2 &= ~_BV(B_MA2);
-			// PORT_MB2 &= ~_BV(B_MB2);
-		// }
 	
 		if (PINC & _BV(6)) {
 			val = val >= 127 ? 127 : val + 1;
