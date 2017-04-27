@@ -12,7 +12,7 @@ volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023}; //10 bit output from 
 volatile uint8_t curMux = 0;
 
 bool calibrating = false;
-uint16_t lastPos = centerValue;
+uint16_t lastPos = (LINE_SENSORS-1) * 500;
 bool lostLine = false;
 
 float iTerm = 0;
@@ -141,11 +141,11 @@ int main() {
 		
 		
 		if (PIND & _BV(4)) { //if jumper not connected
-			setMotorOut(MB2, leftMotorVal);
-			setMotorOut(MA2, rightMotorVal);
+			setMotorOut(MB1, leftMotorVal);
+			setMotorOut(MA1, rightMotorVal);
 		} else {			
-			setMotorOut(MB2, val);
-			setMotorOut(MA2, val);
+			setMotorOut(MB1, val);
+			setMotorOut(MA1, val);
 		}
 		
 	}
@@ -181,11 +181,13 @@ int main() {
 void setMotorOut(uint8_t motor, uint8_t val) {
 	switch (motor) {
 		case MA1:
+		OCR1AL = val;
 		break;
 		case MA2:
 		OCR1BL = val;
 		break;
 		case MB1:
+		OCR0B = val;
 		break;
 		case MB2:
 		OCR0A = val;
@@ -195,14 +197,14 @@ void setMotorOut(uint8_t motor, uint8_t val) {
 
 void setupPWM() {
 	OCR0A = 0; 
-	TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+	TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM01) | _BV(WGM00);
 	TCCR0B = _BV(CS01) | _BV(CS00);
 	//enable timer 0 with fast PWM with a 1/64 prescaler
 	//results in a pwm frequency of about 976Hz
 	//play around see what the motors like
 	
 	OCR1B = 0;
-	TCCR1A = _BV(COM1B1) | _BV(WGM10);
+	TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); 
 	//clk/64 and only 8 bit fast PWM	
 	//only 8 bits so we can use the same logic across both timers,
