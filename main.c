@@ -2,15 +2,17 @@
 // I was here
 
 //const float POSITIONS[] = {POS_LIN1, POS_LIN2, POS_LIN3, POS_LIN4, POS_LIN5};
-volatile bool calibrating = false;
-const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5};
-volatile uint16_t readings[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint32_t adjusted[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint16_t maxes[] = {0, 0, 0, 0, 0}; //10 bit output from the ADC
-volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023}; //10 bit output from the ADC
-const uint16_t centerValue = (ADC_NUMBER-1) * 500;
-uint8_t curMux = 0;
-uint16_t lastPos = (ADC_NUMBER-1)*500;
+const uint8_t MUXES[] = {MUX_LIN1, MUX_LIN2, MUX_LIN3, MUX_LIN4, MUX_LIN5, MUX_LC, MUX_RC};
+const uint16_t centerValue = (LINE_SENSORS-1) * 500;
+
+volatile uint16_t readings[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint32_t adjusted[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint16_t maxes[] = {0, 0, 0, 0, 0, 0, 0}; //10 bit output from the ADC
+volatile uint16_t mins[] = {1023, 1023, 1023, 1023, 1023, 1023, 1023}; //10 bit output from the ADC
+volatile uint8_t curMux = 0;
+
+bool calibrating = false;
+uint16_t lastPos = (LINE_SENSORS-1) * 500;
 bool lostLine = false;
 
 float iTerm = 0;
@@ -35,24 +37,10 @@ int main() {
 	
 	while (1) {
 		
-		// if (PINC & _BV(6)) {
-			// PORT_MB1 |= _BV(B_MB1); // heats up
-			// PORT_MA1 |= _BV(B_MA1); //heats up
-		// } else {
-			// PORT_MB1 &= ~_BV(B_MB1);
-			// PORT_MA1 &= ~_BV(B_MA1);
-		// }
-
-		// if (PINC & _BV(7)) {
-			// PORT_MB2 |= _BV(B_MB2); // M2 B2
-			// PORT_MA2 |= _BV(B_MA2); //M1 A2
-		// } else {
-			// PORT_MA2 &= ~_BV(B_MA2);
-			// PORT_MB2 &= ~_BV(B_MB2);
-		// }
 	
 		if (PINC & _BV(6)) {
-			val = val >= 255 ? 255 : val + 1;
+			val = val >= 127 ? 127 : val + 1;
+			//fast wheel can go up to double speed at full lock steering, so max is 255/2 ~= 127
 		} 
 		if (PINC & _BV(7)) {
 			val = val <= 0 ? 0 : val - 1;
@@ -117,21 +105,32 @@ int main() {
 			correction = correction < 0 ? -1 : 1;
 		}	
 		
+		// bool goLeft = correction < 0;
+		// correction = 1 - fabs(correction);
+		// uint16_t slowMotorVal = round(val * correction);
+		// slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
+		
 		bool goLeft = correction < 0;
-		correction = 1 - fabs(correction);
-		uint16_t slowMotorVal = round(val * correction);
-		slowMotorVal = slowMotorVal > val ? val : slowMotorVal;
+		float slowCorrection = 1 - fabs(correction);
+		float fastCorrection = 1 + fabs(correction);
+		uint16_t slowMotorVal = round(val * slowCorrection);
+		uint16_t fastMotorVal = round(val * fastCorrection);
+		
+		slowMotorVal = slowMotorVal > 255 ? 255 : slowMotorVal;
+		fastMotorVal = fastMotorVal > 255 ? 255 : fastMotorVal;
 		
 		
-		uint8_t leftMotorVal = goLeft ? slowMotorVal : val;
-		uint8_t rightMotorVal = !goLeft ? slowMotorVal : val;
+		uint8_t leftMotorVal = goLeft ? slowMotorVal : fastMotorVal;
+		uint8_t rightMotorVal = !goLeft ? slowMotorVal : fastMotorVal;
+		
+		
 		
 		if (PIND & _BV(4)) { //if jumper not connected
-			setMotorOut(MB2, leftMotorVal);
-			setMotorOut(MA2, rightMotorVal);
+			setMotorOut(MB1, leftMotorVal);
+			setMotorOut(MA1, rightMotorVal);
 		} else {			
-			setMotorOut(MB2, val);
-			setMotorOut(MA2, val);
+			setMotorOut(MB1, val);
+			setMotorOut(MA1, val);
 		}
 		
 	}
@@ -167,11 +166,13 @@ int main() {
 void setMotorOut(uint8_t motor, uint8_t val) {
 	switch (motor) {
 		case MA1:
+		OCR1AL = val;
 		break;
 		case MA2:
 		OCR1BL = val;
 		break;
 		case MB1:
+		OCR0B = val;
 		break;
 		case MB2:
 		OCR0A = val;
@@ -181,14 +182,14 @@ void setMotorOut(uint8_t motor, uint8_t val) {
 
 void setupPWM() {
 	OCR0A = 0; 
-	TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+	TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM01) | _BV(WGM00);
 	TCCR0B = _BV(CS01) | _BV(CS00);
 	//enable timer 0 with fast PWM with a 1/64 prescaler
 	//results in a pwm frequency of about 976Hz
 	//play around see what the motors like
 	
 	OCR1B = 0;
-	TCCR1A = _BV(COM1B1) | _BV(WGM10);
+	TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); 
 	//clk/64 and only 8 bit fast PWM	
 	//only 8 bits so we can use the same logic across both timers,
@@ -252,7 +253,7 @@ uint16_t getCoL() {
 	
 	//floats have been replaced with 1000 int precision
 	//for each sensor
-	for (uint8_t i = 0; i < ADC_NUMBER; i++) {
+	for (uint8_t i = 0; i < LINE_SENSORS; i++) {
 		
 		//get the max and min expected values for each sensor (written in the interrupt)
 		//the difference is the usable range of the sensor. 
@@ -280,14 +281,14 @@ uint16_t getCoL() {
 	}
 	
 	//if the line was last left of center, then steer hard left if we lose the line, and vice versa
-	uint16_t lastDir = lastPos < centerValue ? 0 : (ADC_NUMBER-1)*1000;
+	uint16_t lastDir = lastPos < centerValue ? 0 : (LINE_SENSORS-1)*1000;
 	// if there is very little variation in the data
 		//and the overall field is relatively dark (doesn't trigger on cross intersections)
 		//we've probably lost the line
 	uint16_t valueSpread = spreadMax - spreadMin;
 	const uint16_t LOST_THRESH = 300;
 	const uint16_t FOUND_THRESH = 350;
-	const uint16_t DARKNESS_THRESH = ((1000 * ADC_NUMBER) / 2); // in terms of sum of all readings
+	const uint16_t DARKNESS_THRESH = ((1000 * LINE_SENSORS) / 2); // in terms of sum of all readings
 	
 	if (valueSpread < LOST_THRESH && mass < DARKNESS_THRESH) { 
 		lostLine = true;

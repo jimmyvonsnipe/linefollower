@@ -1,9 +1,6 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define ADC_NUMBER 5
-
-
 #include <avr/io.h>
 #include <avr/interrupt.h>   // interrupt vectors
 #include <util/delay.h>      // delay functions
@@ -18,7 +15,7 @@
 
 //const float POSITIONS[];
 const uint8_t MUXES[];
-uint8_t curMux;
+volatile uint8_t curMux;
 volatile uint16_t readings[]; 
 
 void setMotorOut(uint8_t motor, uint8_t val);
